@@ -1,8 +1,8 @@
 {
-  "name": "yii1-extension",
+  "name": "yii1-extension-fixed",
   "displayName": "Yii 1.1 Extension",
   "description": "VS Code extension for Yii 1.1 framework support",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "sagarkarn",
   "repository": {
     "type": "git",
@@ -139,7 +139,7 @@
     "@typescript-eslint/parser": "^5.45.0",
     "@vscode/test-electron": "^3.0.0",
     "eslint": "^8.28.0",
-    "mocha": "^11.7.6",
+    "mocha": "^11.3.0",
     "typescript": "^4.9.4"
   },
   "dependencies": {

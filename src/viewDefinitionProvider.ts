@@ -343,21 +343,26 @@ export class YiiViewDefinitionProvider implements vscode.DefinitionProvider {
 
         // Try to find protected directory and infer from structure
         const protectedIndex = pathParts.indexOf('protected');
-        if (pathParts[i].endsWith('Controller.php')) {
-            const controllerName = pathParts[i]
-                .replace(/Controller\.php$/, '');
+        if (protectedIndex !== -1) {
+            // If we're in a controller file, extract controller name
+            for (let i = 0; i < pathParts.length; i++) {
+                if (pathParts[i].endsWith('Controller.php')) {
+                    const controllerName = pathParts[i]
+                        .replace(/Controller\.php$/, '');
 
-            const viewControllerName =
-                controllerName.charAt(0).toLowerCase()
-                + controllerName.slice(1);
+                    const viewControllerName =
+                        controllerName.charAt(0).toLowerCase()
+                        + controllerName.slice(1);
 
-            const isInControllers =
-                i > 0 && pathParts[i - 1] === 'controllers';
+                    const isInControllers =
+                        i > 0 && pathParts[i - 1] === 'controllers';
 
-            return {
-                name: viewControllerName,
-                isInControllers
-            };
+                    return {
+                        name: viewControllerName,
+                        isInControllers
+                    };
+                }
+            }
         }
 
         return null;
