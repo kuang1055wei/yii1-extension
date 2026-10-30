@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { YiiViewDefinitionProvider } from './viewDefinitionProvider';
 import { COMMENT_REGEX, RENDER_PATTERN_REGEX } from './infrastructure/constant/RegexConst';
-import { resolveDotNotationPath } from './infrastructure/utils/moduleUtils';
+import { resolveDotNotationPath, lcFirst, resolvePathCaseInsensitive } from './infrastructure/utils/moduleUtils';
 
 export interface ViewInfo {
     viewName: string;
@@ -172,7 +172,11 @@ export class ActionViewLocator {
             if (pathParts.length >= 2) {
                 const controllerName = pathParts[0];
                 const viewFileName = pathParts[pathParts.length - 1];
-                return path.join(workspaceRoot, 'protected', 'views', controllerName, `${viewFileName}.php`);
+                // Resolve the controller's view directory case-insensitively
+                const controllerDir = resolvePathCaseInsensitive(
+                    path.join(workspaceRoot, 'protected', 'views', controllerName)
+                );
+                return path.join(controllerDir, `${viewFileName}.php`);
             }
         }
 
@@ -216,9 +220,14 @@ export class ActionViewLocator {
             const documentDir = path.dirname(documentPath);
             const viewsDir = documentDir.replace(/[/\\]controllers([/\\]|$)/g, path.sep + 'views' + path.sep);
             
+            // Resolve the controller's view directory case-insensitively
+            const controllerDir = resolvePathCaseInsensitive(
+                path.join(viewsDir, controllerInfo.name)
+            );
+            
             if (isPartial) {
-                const partialPath1 = path.join(viewsDir, controllerInfo.name, `_${viewName}.php`);
-                const partialPath2 = path.join(viewsDir, controllerInfo.name, `${viewName}.php`);
+                const partialPath1 = path.join(controllerDir, `_${viewName}.php`);
+                const partialPath2 = path.join(controllerDir, `${viewName}.php`);
                 
                 if (fs.existsSync(partialPath1)) {
                     return partialPath1;
@@ -229,7 +238,7 @@ export class ActionViewLocator {
                 
                 viewPath = partialPath1;
             } else {
-                viewPath = path.join(viewsDir, controllerInfo.name, `${viewName}.php`);
+                viewPath = path.join(controllerDir, `${viewName}.php`);
             }
         } else {
             const documentDir = path.dirname(documentPath);
@@ -267,7 +276,8 @@ export class ActionViewLocator {
         if (controllersIndex !== -1 && controllersIndex < pathParts.length - 1) {
             const controllerFile = pathParts[controllersIndex + 1];
             const controllerName = controllerFile.replace(/Controller\.php?$/, '').replace(/Controller$/, '');
-            return { name: controllerName, isInControllers: true };
+            // View directories use the controller name with a lowercase first letter (Yii lcfirst)
+            return { name: lcFirst(controllerName), isInControllers: true };
         }
         
         const protectedIndex = pathParts.indexOf('protected');
@@ -276,7 +286,7 @@ export class ActionViewLocator {
                 if (pathParts[i].endsWith('Controller.php')) {
                     const controllerName = pathParts[i].replace(/Controller\.php$/, '');
                     const isInControllers = i > 0 && pathParts[i - 1] === 'controllers';
-                    return { name: controllerName, isInControllers };
+                    return { name: lcFirst(controllerName), isInControllers };
                 }
             }
         }

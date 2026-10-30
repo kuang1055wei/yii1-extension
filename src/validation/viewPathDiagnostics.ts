@@ -10,7 +10,7 @@ import { IConfigurationService } from '../domain/interfaces/IConfigurationServic
 import { IYiiProjectDetector } from '../domain/interfaces/IYiiProjectDetector';
 import { RENDER_PATTERN_REGEX } from '../infrastructure/constant/RegexConst';
 import { ViewResolver } from '../infrastructure/view-resolution/ViewResolver';
-import { getModuleFromPath } from '../infrastructure/utils/moduleUtils';
+import { getModuleFromPath, resolvePathCaseInsensitive } from '../infrastructure/utils/moduleUtils';
 
 /**
  * Diagnostics provider for view paths in render/renderPartial calls
@@ -166,7 +166,7 @@ export class ViewPathDiagnostics implements vscode.CodeActionProvider {
                     const viewsDir = moduleName 
                         ? this.configService.getViewsDirectory(workspaceRoot, moduleName)
                         : this.configService.getViewsDirectory(workspaceRoot);
-                    viewPath = path.join(viewsDir, controllerInfo.name);
+                    viewPath = this.resolveControllerViewDir(viewsDir, controllerInfo.name);
                 } else {
                     // Already in views directory
                     viewPath = path.dirname(documentPath);
@@ -273,6 +273,18 @@ export class ViewPathDiagnostics implements vscode.CodeActionProvider {
     }
 
     /**
+     * Resolve a controller's view directory, falling back to a case-insensitive
+     * lookup when the directory exists on disk with a different casing
+     * (e.g. views/Member vs views/member).
+     */
+    private resolveControllerViewDir(viewsDir: string, controllerName: string): string {
+        return resolvePathCaseInsensitive(
+            path.join(viewsDir, controllerName),
+            (p) => this.fileRepository.existsSync(p)
+        );
+    }
+
+    /**
      * Find the end of an action method
      */
     private findActionEnd(text: string, startOffset: number): number {
@@ -372,7 +384,7 @@ export class ViewPathDiagnostics implements vscode.CodeActionProvider {
                     const viewsDir = moduleName 
                         ? this.configService.getViewsDirectory(workspaceRoot, moduleName)
                         : this.configService.getViewsDirectory(workspaceRoot);
-                    viewPath = path.join(viewsDir, controllerInfo.name);
+                    viewPath = this.resolveControllerViewDir(viewsDir, controllerInfo.name);
                 } else {
                     // Already in views directory
                     viewPath = path.dirname(documentPath);
@@ -524,7 +536,7 @@ export class ViewPathDiagnostics implements vscode.CodeActionProvider {
                             const viewsDir = moduleName 
                                 ? this.configService.getViewsDirectory(workspaceRoot, moduleName)
                                 : this.configService.getViewsDirectory(workspaceRoot);
-                            viewPath = path.join(viewsDir, controllerInfo.name);
+                            viewPath = this.resolveControllerViewDir(viewsDir, controllerInfo.name);
                         } else {
                             viewPath = path.dirname(documentPath);
                         }

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { getModuleFromPath, resolveDotNotationPath } from './infrastructure/utils/moduleUtils';
+import { getModuleFromPath, resolveDotNotationPath, resolvePathCaseInsensitive } from './infrastructure/utils/moduleUtils';
 
 export class YiiViewDefinitionProvider implements vscode.DefinitionProvider {
     provideDefinition(
@@ -148,7 +148,9 @@ export class YiiViewDefinitionProvider implements vscode.DefinitionProvider {
                     // }
 
                     // Fallback to main app views directory
-                    const mainViewsPath = path.join(workspaceRoot, 'protected', 'views', controllerName);
+                    const mainViewsPath = resolvePathCaseInsensitive(
+                        path.join(workspaceRoot, 'protected', 'views', controllerName)
+                    );
                     if (isPartial) {
                         // Try both with and without underscore for partials
                         const partialPath1 = path.join(mainViewsPath, `${viewFileName}.php`);
@@ -174,7 +176,9 @@ export class YiiViewDefinitionProvider implements vscode.DefinitionProvider {
 
                     if (moduleName) {
                         // First try module's views directory
-                        const moduleViewsPath = path.join(workspaceRoot, 'protected', 'modules', moduleName, 'views', controllerName);
+                        const moduleViewsPath = resolvePathCaseInsensitive(
+                            path.join(workspaceRoot, 'protected', 'modules', moduleName, 'views', controllerName)
+                        );
                         if (isPartial) {
                             // Try both with and without underscore for partials
                             const partialPath1 = path.join(moduleViewsPath, `${viewFileName}.php`);
@@ -193,7 +197,9 @@ export class YiiViewDefinitionProvider implements vscode.DefinitionProvider {
                     }
 
                     // Fallback to main app views directory
-                    const mainViewsPath = path.join(workspaceRoot, 'protected', 'views', controllerName);
+                    const mainViewsPath = resolvePathCaseInsensitive(
+                        path.join(workspaceRoot, 'protected', 'views', controllerName)
+                    );
                     if (isPartial) {
                         // Try both with and without underscore for partials
                         const partialPath1 = path.join(mainViewsPath, `${viewFileName}.php`);
@@ -274,10 +280,16 @@ export class YiiViewDefinitionProvider implements vscode.DefinitionProvider {
             //          -> protected/modules/admin/views/admin/view.php
             const documentDir = path.dirname(documentPath);
             const viewsDir = documentDir.replace(/[/\\]controllers([/\\]|$)/g, path.sep + 'views' + path.sep);
+            
+            // Resolve the controller's view directory case-insensitively
+            // (the on-disk directory may use a different casing, e.g. "member" vs "Member")
+            const controllerDir = resolvePathCaseInsensitive(
+                path.join(viewsDir, controllerInfo.name)
+            );
 
             if (isPartial) {
                 // Partials can be with or without underscore prefix
-                const partialPath1 = path.join(viewsDir, controllerInfo.name, `${viewName}.php`);
+                const partialPath1 = path.join(controllerDir, `${viewName}.php`);
 
                 if (fs.existsSync(partialPath1)) {
                     return partialPath1;
@@ -285,7 +297,7 @@ export class YiiViewDefinitionProvider implements vscode.DefinitionProvider {
 
                 viewPath = partialPath1; // Default to underscore version
             } else {
-                viewPath = path.join(viewsDir, controllerInfo.name, `${viewName}.php`);
+                viewPath = path.join(controllerDir, `${viewName}.php`);
             }
         } else {
             // Already in views directory, just append the view name

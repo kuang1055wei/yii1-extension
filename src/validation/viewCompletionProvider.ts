@@ -6,7 +6,7 @@ import { IPathResolver } from '../domain/interfaces/IPathResolver';
 import { IConfigurationService } from '../domain/interfaces/IConfigurationService';
 import { ICache } from '../domain/interfaces/ICache';
 import { ViewResolver } from '../infrastructure/view-resolution/ViewResolver';
-import { getModuleFromPath } from '../infrastructure/utils/moduleUtils';
+import { getModuleFromPath, lcFirst, resolvePathCaseInsensitive } from '../infrastructure/utils/moduleUtils';
 
 /**
  * Completion provider for view names in render/renderPartial calls
@@ -205,7 +205,10 @@ export class ViewCompletionProvider implements vscode.CompletionItemProvider {
             }
         } else if (pathParts.length === 1) {
             // Show views in controller
-            const controllerDir = path.join(viewsDir, pathParts[0]);
+            const controllerDir = resolvePathCaseInsensitive(
+                path.join(viewsDir, pathParts[0]),
+                (p) => this.fileRepository.existsSync(p)
+            );
             if (this.fileRepository.existsSync(controllerDir)) {
                 const views = this.getViewsInDirectory(controllerDir, isPartial);
                 for (const view of views) {
@@ -259,7 +262,10 @@ export class ViewCompletionProvider implements vscode.CompletionItemProvider {
             }
         } else if (pathParts.length === 1) {
             // Show views in controller
-            const controllerDir = path.join(viewsDir, pathParts[0]);
+            const controllerDir = resolvePathCaseInsensitive(
+                path.join(viewsDir, pathParts[0]),
+                (p) => this.fileRepository.existsSync(p)
+            );
             if (this.fileRepository.existsSync(controllerDir)) {
                 const views = this.getViewsInDirectory(controllerDir, isPartial);
                 for (const view of views) {
@@ -454,7 +460,10 @@ export class ViewCompletionProvider implements vscode.CompletionItemProvider {
         }
         
             let viewsDir = this.configService.getViewsDirectory(workspaceRoot, controllerInfo.moduleName,);
-            viewsDir = path.join(viewsDir, controllerInfo.name);
+            viewsDir = resolvePathCaseInsensitive(
+                path.join(viewsDir, controllerInfo.name),
+                (p) => this.fileRepository.existsSync(p)
+            );
             if (!this.fileRepository.existsSync(viewsDir)) {
             return completions;
         }
@@ -559,7 +568,10 @@ export class ViewCompletionProvider implements vscode.CompletionItemProvider {
                 const moduleName = getModuleFromPath(document.uri.fsPath, workspaceRoot, this.configService.getModulesPath());
                 if (moduleName) {
                     const moduleViewsDir = this.configService.getViewsDirectory(workspaceRoot, moduleName);
-                    const moduleControllerViewsDir = path.join(moduleViewsDir, controllerName);
+                    const moduleControllerViewsDir = resolvePathCaseInsensitive(
+                        path.join(moduleViewsDir, controllerName),
+                        (p) => this.fileRepository.existsSync(p)
+                    );
                     
                     if (this.fileRepository.existsSync(moduleControllerViewsDir)) {
                         const views = this.getViewsInDirectory(moduleControllerViewsDir, isPartial);
@@ -579,7 +591,10 @@ export class ViewCompletionProvider implements vscode.CompletionItemProvider {
             
             // Also check main app views
             const viewsDir = this.configService.getViewsDirectory(workspaceRoot);
-            const controllerViewsDir = path.join(viewsDir, controllerName);
+            const controllerViewsDir = resolvePathCaseInsensitive(
+                path.join(viewsDir, controllerName),
+                (p) => this.fileRepository.existsSync(p)
+            );
             
             if (this.fileRepository.existsSync(controllerViewsDir)) {
                 const views = this.getViewsInDirectory(controllerViewsDir, isPartial);
@@ -730,7 +745,10 @@ export class ViewCompletionProvider implements vscode.CompletionItemProvider {
             const moduleName = parts[2];
             const controllerName = parts[4];
             const viewsDir = this.configService.getViewsDirectory(workspaceRoot, moduleName);
-            const controllerViewsDir = path.join(viewsDir, controllerName);
+            const controllerViewsDir = resolvePathCaseInsensitive(
+                path.join(viewsDir, controllerName),
+                (p) => this.fileRepository.existsSync(p)
+            );
             
             if (this.fileRepository.existsSync(controllerViewsDir)) {
                 const views = this.getViewsInDirectory(controllerViewsDir, isPartial);
@@ -747,7 +765,10 @@ export class ViewCompletionProvider implements vscode.CompletionItemProvider {
             // Handle application.views.controller.view
             const controllerName = parts[2];
             const viewsDir = this.configService.getViewsDirectory(workspaceRoot);
-            const controllerViewsDir = path.join(viewsDir, controllerName);
+            const controllerViewsDir = resolvePathCaseInsensitive(
+                path.join(viewsDir, controllerName),
+                (p) => this.fileRepository.existsSync(p)
+            );
             
             if (this.fileRepository.existsSync(controllerViewsDir)) {
                 const views = this.getViewsInDirectory(controllerViewsDir, isPartial);
@@ -787,16 +808,22 @@ export class ViewCompletionProvider implements vscode.CompletionItemProvider {
         
         if (moduleName && controllerInfo) {
             // Module views: application.modules.ModuleName.views.controller.view
-            viewsDir = path.join(
-                this.configService.getViewsDirectory(workspaceRoot, moduleName),
-                controllerInfo.name
+            viewsDir = resolvePathCaseInsensitive(
+                path.join(
+                    this.configService.getViewsDirectory(workspaceRoot, moduleName),
+                    controllerInfo.name
+                ),
+                (p) => this.fileRepository.existsSync(p)
             );
             dotNotationPrefix = `application.modules.${moduleName}.views.${controllerInfo.name}`;
         } else if (controllerInfo) {
             // Main app views: application.views.controller.view
-            viewsDir = path.join(
-                this.configService.getViewsDirectory(workspaceRoot),
-                controllerInfo.name
+            viewsDir = resolvePathCaseInsensitive(
+                path.join(
+                    this.configService.getViewsDirectory(workspaceRoot),
+                    controllerInfo.name
+                ),
+                (p) => this.fileRepository.existsSync(p)
             );
             dotNotationPrefix = `application.views.${controllerInfo.name}`;
         } else {
@@ -929,7 +956,7 @@ export class ViewCompletionProvider implements vscode.CompletionItemProvider {
             const controllerFile = pathParts[controllersIndex + 1];
             const controllerName = controllerFile.replace(/Controller\.php?$/, '').replace(/Controller$/, '');
             const moduleName = getModuleFromPath(documentPath, workspaceRoot, this.configService.getModulesPath());
-            return {name: controllerName, moduleName: moduleName ? `${moduleName}` : undefined, isInControllers: true };
+            return {name: lcFirst(controllerName), moduleName: moduleName ? `${moduleName}` : undefined, isInControllers: true };
         }
         
         return null;
